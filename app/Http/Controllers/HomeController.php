@@ -11,4 +11,12 @@ class HomeController extends Controller
         $judul = 'Sistem Informasi Peminjaman Buku Perpustakaan Mini'; 
         return view('home', ['judul' => $judul]); 
     } 
+    public function tentang()
+    {
+        return view('tentang');
+    }
+    public function kontak()
+    {
+        return view('kontak');
+    }
 }
