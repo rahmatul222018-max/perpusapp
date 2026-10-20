@@ -1,68 +1,92 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
-// BAGIAN INI WAJIB ADA: Menerima data $books dari BookController
-defineProps({
-  books: Object,
+const props = defineProps({
+    books: Object,
+    search: String,
 });
+
+// State untuk input pencarian
+const keyword = ref(props.search);
+
+// Fungsi pencarian saat menekan Enter
+function cari() {
+    router.get('/books', { search: keyword.value }, { preserveState: true });
+}
+
+// Fungsi konfirmasi hapus data
+function hapus(id) {
+    if (confirm('Yakin ingin menghapus buku ini?')) {
+        router.delete(route('books.destroy', id));
+    }
+}
 </script>
 
 <template>
-  <AuthenticatedLayout>
-    <div class="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-md mt-6">
-      
-      <!-- Header Halaman & Tombol Tambah Buku -->
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-800">Data Buku</h1>
-        <Link 
-          href="/books/create" 
-          class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow transition flex items-center gap-1"
-        >
-          <span class="text-lg">+</span> Tambah Buku
-        </Link>
-      </div>
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Data Buku</h2>
+        </template>
 
-      <!-- Tabel Data Buku -->
-      <div class="overflow-x-auto border border-gray-200 rounded-lg">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-gray-100 border-b border-gray-200 text-gray-700 font-semibold text-sm">
-              <th class="p-3">Kode</th>
-              <th class="p-3">Judul</th>
-              <th class="p-3">Pengarang</th>
-              <th class="p-3">Penerbit</th>
-              <th class="p-3 text-center">Tahun</th>
-              <th class="p-3 text-center">Stok</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200 text-gray-600 text-sm">
-            
-            <!-- Looping data buku -->
-            <tr v-for="book in books.data" :key="book.id" class="hover:bg-gray-50 transition">
-              <td class="p-3 font-medium text-gray-900">{{ book.kode_buku }}</td>
-              <td class="p-3">{{ book.judul }}</td>
-              <td class="p-3">{{ book.pengarang }}</td>
-              <td class="p-3">{{ book.penerbit || '-' }}</td>
-              <td class="p-3 text-center">{{ book.tahun || '-' }}</td>
-              <td class="p-3 text-center">
-                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                  {{ book.stok }}
-                </span>
-              </td>
-            </tr>
-            
-            <!-- Pesan jika data masih kosong -->
-            <tr v-if="!books.data || books.data.length === 0">
-              <td colspan="6" class="p-4 text-center text-gray-500 italic">
-                Belum ada data buku.
-              </td>
-            </tr>
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                
+                <!-- Flash Message Sukses -->
+                <div v-if="$page.props.flash.success" class="mb-4 p-4 text-sm text-green-700 bg-green-100 rounded-lg shadow">
+                    {{ $page.props.flash.success }}
+                </div>
 
-          </tbody>
-        </table>
-      </div>
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900">
+                    
+                    <!-- Bagian Tombol Tambah & Kotak Pencarian -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <Link href="/books/create" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                            + Tambah Buku
+                        </Link>
 
-    </div>
-  </AuthenticatedLayout>
+                        <input 
+                            v-model="keyword"
+                            @keyup.enter="cari"
+                            type="text"
+                            placeholder="Cari judul atau pengarang..."
+                            class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full sm:w-72"
+                        >
+                    </div>
+
+                    <!-- Tabel Data Buku -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kode</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengarang</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
+                                    <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="book in books.data" :key="book.id">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ book.kode_buku }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ book.judul }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ book.pengarang }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ book.stok }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                                        <Link :href="`/books/${book.id}/edit`" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded">Edit</Link>
+                                        <button @click="hapus(book.id)" class="text-red-600 hover:text-red-900 bg-red-50 px-3 py-1 rounded">Hapus</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="books.data.length === 0">
+                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Tidak ada data buku ditemukan.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
 </template>
