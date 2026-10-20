@@ -38,6 +38,11 @@ function hapus(id) {
                     {{ $page.props.flash.success }}
                 </div>
 
+                <!-- Flash Message Error (Tambahan Tugas Mandiri 1) -->
+                <div v-if="$page.props.flash.error" class="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg shadow">
+                    {{ $page.props.flash.error }}
+                </div>
+
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900">
                     
                     <!-- Bagian Tombol Tambah & Kotak Pencarian -->
@@ -50,7 +55,7 @@ function hapus(id) {
                             v-model="keyword"
                             @keyup.enter="cari"
                             type="text"
-                            placeholder="Cari judul atau pengarang..."
+                            placeholder="Cari kode, judul, atau pengarang..."
                             class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm w-full sm:w-72"
                         >
                     </div>
