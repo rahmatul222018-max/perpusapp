@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Member extends Model 
 { 
-   protected $fillable = [ 
-            'nama', 
-            'nis_nim', 
-            'no_hp', 
-     ]; 
+   protected $fillable = [
+    'nama',
+    'nis_nim',
+    'no_hp',
+    'foto', // baris baru: mengizinkan kolom foto diisi
+];
    use HasFactory; 
 
    public function loans() 

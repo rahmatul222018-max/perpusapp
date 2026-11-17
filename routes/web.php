@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\BookController;
+use App\Http\Controllers\MemberController; // baris baru: memanggil MemberController
 use App\Http\Controllers\ProfileController; // 1. Memanggil ProfileController
 
 Route::get('/', [HomeController::class, 'index']);
@@ -22,6 +23,10 @@ Route::middleware(['auth'])->group(function () {
 
     // 3. Rute Resource untuk Buku
     Route::resource('books', BookController::class);
+    Route::middleware(['auth'])->group(function () {
+    Route::resource('books', BookController::class);
+    Route::resource('members', MemberController::class); // baris baru: 7 alamat CRUD untuk anggota
+});
 });
 
 require __DIR__.'/auth.php';
