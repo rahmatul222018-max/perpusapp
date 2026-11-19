@@ -1,32 +1,43 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\BookController;
-use App\Http\Controllers\MemberController; // baris baru: memanggil MemberController
-use App\Http\Controllers\ProfileController; // 1. Memanggil ProfileController
+use App\Http\Controllers\MemberController;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
-Route::get('/', [HomeController::class, 'index']);
-Route::get('/tentang', [HomeController::class, 'tentang']);
-Route::get('/kontak', [HomeController::class, 'kontak']);
+Route::get('/', function () {
+    return Inertia::render('Welcome', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+        'laravelVersion' => Application::VERSION,
+        'phpVersion' => PHP_VERSION,
+    ]);
+});
 
-// Seluruh route di bawah ini hanya bisa diakses setelah login
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', function () {
-        return inertia('Dashboard');
-    })->name('dashboard');
+Route::get('/dashboard', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
 
-    // 2. Rute Profile (diperlukan oleh AuthenticatedLayout.vue)
+Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
-    // 3. Rute Resource untuk Buku
-    Route::resource('books', BookController::class);
     Route::middleware(['auth'])->group(function () {
-    Route::resource('books', BookController::class);
-    Route::resource('members', MemberController::class); // baris baru: 7 alamat CRUD untuk anggota
-});
-});
+    // Route AJAX (JSON) HARUS ditulis DI ATAS Route::resource
+    Route::get('books/search', [BookController::class, 'search'])
+        ->name('books.search');
+    Route::get('books/cek-kode', [BookController::class, 'cekKode'])
+        ->name('books.cek-kode');
+    Route::get('members/search', [MemberController::class, 'search'])
+        ->name('members.search');
+    Route::get('members/cek-nis', [MemberController::class, 'cekNis'])
+        ->name('members.cek-nis');
 
+    Route::resource('books', BookController::class);
+    Route::resource('members', MemberController::class);
+});
 require __DIR__.'/auth.php';

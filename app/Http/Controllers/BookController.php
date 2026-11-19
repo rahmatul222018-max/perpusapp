@@ -75,4 +75,45 @@ class BookController extends Controller
         $book->delete(); 
         return redirect()->route('books.index')->with('success', 'Buku berhasil dihapus'); 
     }
+
+    /**
+     * Endpoint JSON untuk live search buku (dipanggil oleh Axios).
+     */
+   /**
+     * Endpoint JSON untuk live search buku (judul, pengarang, atau penerbit).
+     */
+    public function search(Request $request)
+    {
+        $kataKunci = $request->query('q', '');
+
+        $books = Book::where(function ($query) use ($kataKunci) {
+            $query->where('judul', 'like', "%{$kataKunci}%")
+                  ->orWhere('pengarang', 'like', "%{$kataKunci}%")
+                  ->orWhere('penerbit', 'like', "%{$kataKunci}%");
+        })
+        ->latest()
+        ->limit(10)
+        ->get(['id', 'kode_buku', 'judul', 'pengarang', 'penerbit', 'stok']);
+
+        return response()->json($books);
+    }
+
+    /**
+     * Endpoint JSON untuk validasi realtime: apakah kode buku masih tersedia?
+     */
+    public function cekKode(Request $request)
+    {
+        $kodeBuku = $request->query('kode_buku', '');
+        $abaikanId = $request->query('abaikan');
+
+        $sudahDipakai = Book::where('kode_buku', $kodeBuku)
+            ->when($abaikanId, function ($query, $id) {
+                $query->where('id', '!=', $id);
+            })
+            ->exists();
+
+        return response()->json([
+            'tersedia' => ! $sudahDipakai,
+        ]);
+    }
 }

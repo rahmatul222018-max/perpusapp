@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import { ref, watch, onBeforeUnmount } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     member: Object,
@@ -23,6 +24,56 @@ function pilihFoto(event) {
     pratinjau.value = berkas ? URL.createObjectURL(berkas) : null;
 }
 
+// Validasi realtime NIS/NIM dengan parameter abaikan
+const statusNis = ref('');
+let timerNis = null;
+let permintaanNis = null;
+
+async function periksaNis() {
+    if (permintaanNis) {
+        permintaanNis.abort();
+    }
+    permintaanNis = new AbortController();
+    statusNis.value = 'memeriksa';
+
+    try {
+        const respons = await axios.get(route('members.cek-nis'), {
+            params: {
+                nis_nim: form.nis_nim.trim(),
+                abaikan: props.member.id,
+            },
+            signal: permintaanNis.signal,
+        });
+        statusNis.value = respons.data.tersedia ? 'tersedia' : 'terpakai';
+    } catch (error) {
+        if (axios.isCancel(error)) {
+            return;
+        }
+        statusNis.value = 'gagal';
+    }
+}
+
+watch(() => form.nis_nim, (nilai) => {
+    clearTimeout(timerNis);
+
+    if (!nilai || nilai.trim() === '') {
+        if (permintaanNis) {
+            permintaanNis.abort();
+        }
+        statusNis.value = '';
+        return;
+    }
+
+    timerNis = setTimeout(periksaNis, 500);
+});
+
+onBeforeUnmount(() => {
+    clearTimeout(timerNis);
+    if (permintaanNis) {
+        permintaanNis.abort();
+    }
+});
+
 function submit() {
     form.post(route('members.update', props.member.id));
 }
@@ -30,89 +81,78 @@ function submit() {
 
 <template>
     <AuthenticatedLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Edit Anggota
-            </h2>
-        </template>
-
         <div class="py-8">
-            <div class="mx-auto max-w-2xl sm:px-6 lg:px-8">
-                <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
-                    <form @submit.prevent="submit" class="space-y-5">
+            <div class="max-w-2xl mx-auto sm:px-6 lg:px-8">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">Edit Anggota</h1>
+
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                    <form @submit.prevent="submit" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Nama</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nama</label>
                             <input
                                 v-model="form.nama"
                                 type="text"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
                             >
-                            <div v-if="form.errors.nama" class="mt-1 text-sm text-red-600">{{ form.errors.nama }}</div>
+                            <div v-if="form.errors.nama" class="text-red-600 text-sm mt-1">{{ form.errors.nama }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">NIS/NIM</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">NIS/NIM</label>
                             <input
                                 v-model="form.nis_nim"
                                 type="text"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
                             >
-                            <div v-if="form.errors.nis_nim" class="mt-1 text-sm text-red-600">{{ form.errors.nis_nim }}</div>
+
+                            <!-- Pesan hasil pemeriksaan realtime -->
+                            <div v-if="statusNis === 'memeriksa'" class="text-gray-500 text-sm mt-1">
+                                Memeriksa NIS/NIM...
+                            </div>
+                            <div v-else-if="statusNis === 'tersedia'" class="text-green-700 text-sm mt-1">
+                                NIS/NIM ini tersedia.
+                            </div>
+                            <div v-else-if="statusNis === 'terpakai'" class="text-red-600 text-sm mt-1">
+                                NIS/NIM ini sudah terdaftar. Gunakan nomor lain.
+                            </div>
+                            <div v-else-if="statusNis === 'gagal'" class="text-yellow-700 text-sm mt-1">
+                                Pemeriksaan otomatis gagal. Anda tetap dapat menyimpan; server akan memeriksa ulang.
+                            </div>
+
+                            <div v-if="form.errors.nis_nim" class="text-red-600 text-sm mt-1">{{ form.errors.nis_nim }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">No. HP</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">No. HP</label>
                             <input
                                 v-model="form.no_hp"
                                 type="text"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
                             >
-                            <div v-if="form.errors.no_hp" class="mt-1 text-sm text-red-600">{{ form.errors.no_hp }}</div>
+                            <div v-if="form.errors.no_hp" class="text-red-600 text-sm mt-1">{{ form.errors.no_hp }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Foto Saat Ini</label>
-                            <img
-                                v-if="member.foto"
-                                :src="`/storage/${member.foto}`"
-                                alt="Foto saat ini"
-                                class="mt-2 h-32 w-32 rounded-md border border-gray-200 object-cover"
-                            >
-                            <span v-else class="mt-1 inline-block text-sm text-gray-500">Belum ada foto</span>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Foto Saat Ini</label>
+                            <img v-if="member.foto" :src="`/storage/${member.foto}`" alt="Foto saat ini" class="h-32 w-32 object-cover rounded-md border">
+                            <span v-else class="text-sm text-gray-400">Belum ada foto</span>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Ganti Foto (kosongkan jika tidak ingin mengganti)</label>
-                            <input
-                                type="file"
-                                accept="image/png, image/jpeg"
-                                @change="pilihFoto"
-                                class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-gray-800 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:text-white hover:file:bg-gray-700"
-                            >
-                            <div v-if="form.errors.foto" class="mt-1 text-sm text-red-600">{{ form.errors.foto }}</div>
-
-                            <img
-                                v-if="pratinjau"
-                                :src="pratinjau"
-                                alt="Pratinjau foto baru"
-                                class="mt-3 h-32 w-32 rounded-md border border-gray-200 object-cover"
-                            >
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ganti Foto (kosongkan jika tidak ingin mengganti)</label>
+                            <input type="file" accept="image/png, image/jpeg" @change="pilihFoto" class="text-sm text-gray-600">
+                            <div v-if="form.errors.foto" class="text-red-600 text-sm mt-1">{{ form.errors.foto }}</div>
+                            <img v-if="pratinjau" :src="pratinjau" alt="Pratinjau foto baru" class="mt-2 h-32 w-32 object-cover rounded-md border">
                         </div>
 
-                        <div class="flex items-center gap-3 pt-2">
+                        <div class="pt-2">
                             <button
                                 type="submit"
-                                :disabled="form.processing"
-                                class="inline-flex items-center rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700 disabled:opacity-50"
+                                :disabled="form.processing || statusNis === 'terpakai'"
+                                class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
                             >
                                 Simpan Perubahan
                             </button>
-                            <Link
-                                href="/members"
-                                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 transition hover:bg-gray-50"
-                            >
-                                Batal
-                            </Link>
                         </div>
                     </form>
                 </div>
