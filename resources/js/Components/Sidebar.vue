@@ -12,6 +12,7 @@ import { Link } from '@inertiajs/vue3';
             <Link href="/books" class="block hover:text-gray-300">Data Buku</Link>
             <!-- Baris baru: menu menuju daftar anggota, href harus sama dengan Route::resource('members', ...) -->
             <Link href="/members" class="block hover:text-gray-300">Data Anggota</Link>
+            <Link href="/loans" class="block hover:text-gray-300">Peminjaman</Link>
         </nav>
     </aside>
 </template>
