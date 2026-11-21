@@ -82,4 +82,41 @@ class LoanController extends Controller
         return redirect()->route('loans.index')
             ->with('success', 'Peminjaman berhasil disimpan. Stok buku berkurang 1.');
     }
+    /**
+     * Memproses pengembalian buku dan menghitung denda.
+     */
+    public function kembalikan(Loan $loan)
+    {
+        // 1. Tolak jika buku ini sudah dikembalikan sebelumnya
+        if ($loan->status === 'dikembalikan') {
+            return back()->withErrors([
+                'loan' => 'Buku ini sudah dikembalikan sebelumnya.',
+            ]);
+        }
+
+        // 2. Hitung denda sebelum status dan tanggal_kembali diubah
+        $hariTerlambat = $loan->hari_terlambat;
+        $denda = $loan->perkiraan_denda;
+
+        // 3. Simpan perubahan peminjaman dan tambah stok buku sebagai satu kesatuan
+        DB::transaction(function () use ($loan, $denda) {
+            $loan->update([
+                'status' => 'dikembalikan',
+                'tanggal_kembali' => today()->toDateString(),
+                'denda' => $denda,
+            ]);
+
+            $loan->book->increment('stok');
+        });
+
+        // 4. Susun pesan sukses
+        $pesan = 'Buku berhasil dikembalikan. Stok buku bertambah 1.';
+        if ($denda > 0) {
+            $pesan .= ' Terlambat ' . $hariTerlambat . ' hari, denda Rp'
+                . number_format($denda, 0, ',', '.') . '.';
+        }
+
+        // 5. Kembali ke halaman daftar peminjaman dengan pesan sukses
+        return back()->with('success', $pesan);
+    }
 }

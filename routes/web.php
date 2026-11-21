@@ -3,6 +3,7 @@
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\LoanController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -17,9 +18,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -41,5 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('books', BookController::class);
     Route::resource('members', MemberController::class);
     Route::resource('loans', LoanController::class)->only(['index', 'create', 'store']);
+    Route::patch('loans/{loan}/kembalikan', [LoanController::class, 'kembalikan'])
+    ->name('loans.kembalikan');
 });
 require __DIR__.'/auth.php';
